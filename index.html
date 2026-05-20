@@ -1,0 +1,672 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Zenith Price Monitor Dashboard</title>
+    <!-- Google Fonts: Outfit -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Chart.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --bg-gradient: linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #311042 100%);
+            --card-bg: rgba(30, 41, 59, 0.45);
+            --card-border: rgba(255, 255, 255, 0.08);
+            --text-primary: #f8fafc;
+            --text-secondary: #94a3b8;
+            --accent-purple: #a855f7;
+            --accent-purple-glow: rgba(168, 85, 247, 0.4);
+            --accent-blue: #3b82f6;
+            --accent-green: #10b981;
+            --accent-green-glow: rgba(16, 185, 129, 0.2);
+            --accent-red: #ef4444;
+            --accent-red-glow: rgba(239, 68, 68, 0.2);
+            --font-family: 'Outfit', sans-serif;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: var(--font-family);
+            background: var(--bg-gradient);
+            background-attachment: fixed;
+            color: var(--text-primary);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 2rem 1rem;
+            overflow-x: hidden;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 1100px;
+            display: flex;
+            flex-direction: column;
+            gap: 2rem;
+        }
+
+        /* Header Style */
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1.5rem 2rem;
+            background: var(--card-bg);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid var(--card-border);
+            border-radius: 24px;
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+            animation: fadeInDown 0.8s ease-out;
+        }
+
+        .logo-section h1 {
+            font-size: 1.8rem;
+            font-weight: 700;
+            background: linear-gradient(to right, #a855f7, #3b82f6);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            letter-spacing: -0.5px;
+        }
+
+        .logo-section p {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            margin-top: 2px;
+        }
+
+        .status-badge {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 16px;
+            background: rgba(16, 185, 129, 0.1);
+            border: 1px solid rgba(16, 185, 129, 0.2);
+            border-radius: 100px;
+            font-size: 0.9rem;
+            font-weight: 500;
+            color: var(--accent-green);
+        }
+
+        .status-pulse {
+            width: 8px;
+            height: 8px;
+            background-color: var(--accent-green);
+            border-radius: 50%;
+            box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
+            animation: pulse 1.6s infinite;
+        }
+
+        /* Metric Grid */
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 1.5rem;
+            animation: fadeIn 1s ease-out;
+        }
+
+        .metric-card {
+            background: var(--card-bg);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid var(--card-border);
+            border-radius: 24px;
+            padding: 1.8rem;
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.2);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .metric-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 4px;
+            background: linear-gradient(90deg, transparent, var(--accent-purple), transparent);
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        .metric-card:hover {
+            transform: translateY(-5px);
+            border-color: rgba(255, 255, 255, 0.15);
+            box-shadow: 0 12px 40px 0 rgba(168, 85, 247, 0.15);
+        }
+
+        .metric-card:hover::before {
+            opacity: 1;
+        }
+
+        .metric-label {
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .metric-value {
+            font-size: 2.2rem;
+            font-weight: 700;
+            margin-top: 0.5rem;
+            letter-spacing: -1px;
+            display: flex;
+            align-items: baseline;
+            gap: 6px;
+        }
+
+        .metric-desc {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            margin-top: 0.6rem;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .trend-up {
+            color: var(--accent-red);
+        }
+
+        .trend-down {
+            color: var(--accent-green);
+        }
+
+        /* Visual Board Section */
+        .dashboard-main {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 1.5rem;
+        }
+
+        @media (max-width: 900px) {
+            .dashboard-main {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .chart-container {
+            background: var(--card-bg);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid var(--card-border);
+            border-radius: 24px;
+            padding: 2rem;
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.25);
+            min-height: 400px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+
+        .chart-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+
+        .chart-title {
+            font-size: 1.2rem;
+            font-weight: 600;
+        }
+
+        .chart-wrapper {
+            position: relative;
+            flex-grow: 1;
+            width: 100%;
+            height: 100%;
+        }
+
+        /* History Table Section */
+        .history-card {
+            background: var(--card-bg);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid var(--card-border);
+            border-radius: 24px;
+            padding: 1.8rem;
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.25);
+            max-height: 500px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .history-header {
+            font-size: 1.2rem;
+            font-weight: 600;
+            margin-bottom: 1.2rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 1px solid var(--card-border);
+        }
+
+        .table-wrapper {
+            overflow-y: auto;
+            flex-grow: 1;
+            padding-right: 4px;
+        }
+
+        .table-wrapper::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .table-wrapper::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.02);
+            border-radius: 10px;
+        }
+
+        .table-wrapper::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+        }
+
+        .table-wrapper::-webkit-scrollbar-thumb:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            text-align: left;
+        }
+
+        th {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            font-weight: 600;
+            text-transform: uppercase;
+            padding: 8px 12px;
+        }
+
+        td {
+            font-size: 0.9rem;
+            padding: 12px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+        }
+
+        tr:last-child td {
+            border-bottom: none;
+        }
+
+        .log-date {
+            color: var(--text-secondary);
+            font-size: 0.8rem;
+        }
+
+        .log-price {
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        /* Error/Loading state */
+        .loading-overlay {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            gap: 12px;
+            height: 300px;
+            color: var(--text-secondary);
+        }
+
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid rgba(255, 255, 255, 0.1);
+            border-radius: 50%;
+            border-top-color: var(--accent-purple);
+            animation: spin 1s ease-in-out infinite;
+        }
+
+        /* Animations */
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        @keyframes pulse {
+            0% {
+                box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.4);
+            }
+            70% {
+                box-shadow: 0 0 0 10px rgba(16, 185, 129, 0);
+            }
+            100% {
+                box-shadow: 0 0 0 0 rgba(16, 185, 129, 0);
+            }
+        }
+
+        @keyframes fadeInDown {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <header>
+            <div class="logo-section">
+                <h1>Zenith Price Monitor</h1>
+                <p>Real-time e-commerce telemetry and threshold tracking dashboard</p>
+            </div>
+            <div class="status-badge">
+                <div class="status-pulse"></div>
+                System Active
+            </div>
+        </header>
+
+        <!-- Metrics Grid -->
+        <section class="metrics-grid">
+            <!-- Metric 1: Current Price -->
+            <div class="metric-card">
+                <div class="metric-label">Current Price</div>
+                <div class="metric-value" id="val-current">--</div>
+                <div class="metric-desc" id="desc-change">
+                    No logs recorded yet
+                </div>
+            </div>
+
+            <!-- Metric 2: Alert Threshold -->
+            <div class="metric-card">
+                <div class="metric-label">Target Threshold</div>
+                <div class="metric-value" id="val-threshold">$199.99</div>
+                <div class="metric-desc">
+                    Alert triggers at or below this value
+                </div>
+            </div>
+
+            <!-- Metric 3: Tracker Status -->
+            <div class="metric-card">
+                <div class="metric-label">Monitor Status</div>
+                <div class="metric-value" id="val-status" style="font-size: 1.8rem; margin-top: 0.9rem;">--</div>
+                <div class="metric-desc" id="desc-status">
+                    Initializing telemetry...
+                </div>
+            </div>
+        </section>
+
+        <!-- Main Dashboard View -->
+        <section class="dashboard-main">
+            <!-- Chart Card -->
+            <div class="chart-container">
+                <div class="chart-header">
+                    <div class="chart-title" id="product-title">Product Telemetry History</div>
+                    <div style="font-size: 0.85rem; color: var(--text-secondary);" id="total-scrapes">0 entries</div>
+                </div>
+                <div class="chart-wrapper" id="chart-wrapper">
+                    <div class="loading-overlay" id="loading-view">
+                        <div class="spinner"></div>
+                        <p>Loading historical data...</p>
+                    </div>
+                    <canvas id="priceChart" style="display: none;"></canvas>
+                </div>
+            </div>
+
+            <!-- History Logs List -->
+            <div class="history-card">
+                <div class="history-header">Recent Telemetry Checks</div>
+                <div class="table-wrapper">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Timestamp</th>
+                                <th>Price</th>
+                            </tr>
+                        </thead>
+                        <tbody id="logs-tbody">
+                            <tr>
+                                <td colspan="2" style="text-align: center; color: var(--text-secondary); padding: 2rem 0;">
+                                    Loading history...
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // Configuration parameters
+            const threshold = 199.99;
+            document.getElementById('val-threshold').innerText = `$${threshold.toFixed(2)}`;
+
+            // Fetch and parse CSV
+            fetch('price_history.csv')
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('No historical data found (yet).');
+                    }
+                    return response.text();
+                })
+                .then(csvText => {
+                    parseAndRenderData(csvText, threshold);
+                })
+                .catch(err => {
+                    console.error(err);
+                    showEmptyState(err.message);
+                });
+        });
+
+        function parseAndRenderData(csvText, threshold) {
+            const lines = csvText.trim().split('\n');
+            if (lines.length <= 1) {
+                showEmptyState('No records available inside price history log.');
+                return;
+            }
+
+            const header = lines[0].split(',');
+            const logs = [];
+
+            for (let i = 1; i < lines.length; i++) {
+                const row = lines[i].split(',');
+                if (row.length >= 3) {
+                    logs.push({
+                        timestamp: row[0].trim(),
+                        title: row[1].replace(/"/g, '').trim(),
+                        price: parseFloat(row[2].trim())
+                    });
+                }
+            }
+
+            if (logs.length === 0) {
+                showEmptyState('Log file exists but has no valid items.');
+                return;
+            }
+
+            // Reverse logs so latest is first
+            const latest = logs[logs.length - 1];
+            const previous = logs.length > 1 ? logs[logs.length - 2] : null;
+
+            // Set Title
+            document.getElementById('product-title').innerText = latest.title;
+
+            // Update Current Price Card
+            document.getElementById('val-current').innerText = `$${latest.price.toFixed(2)}`;
+            const changeDesc = document.getElementById('desc-change');
+            if (previous) {
+                const diff = latest.price - previous.price;
+                if (diff < 0) {
+                    changeDesc.innerHTML = `<span class="trend-down">📉 Decreased by $${Math.abs(diff).toFixed(2)}</span> since last check`;
+                } else if (diff > 0) {
+                    changeDesc.innerHTML = `<span class="trend-up">📈 Increased by $${diff.toFixed(2)}</span> since last check`;
+                } else {
+                    changeDesc.innerHTML = `<span>Unchanged</span> since last check`;
+                }
+            } else {
+                changeDesc.innerText = 'First recorded price point';
+            }
+
+            // Update Status Card
+            const statusVal = document.getElementById('val-status');
+            const statusDesc = document.getElementById('desc-status');
+            if (latest.price <= threshold) {
+                statusVal.innerText = 'TARGET HIT';
+                statusVal.style.color = 'var(--accent-green)';
+                statusDesc.innerText = 'Price is at or below threshold!';
+            } else {
+                statusVal.innerText = 'MONITORING';
+                statusVal.style.color = 'var(--accent-blue)';
+                statusDesc.innerText = 'Waiting for price to drop...';
+            }
+
+            // Total Scrapes count
+            document.getElementById('total-scrapes').innerText = `${logs.length} telemetry entries`;
+
+            // Populate Logs Table (Latest first)
+            const tbody = document.getElementById('logs-tbody');
+            tbody.innerHTML = '';
+            [...logs].reverse().forEach(log => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td class="log-date">${log.timestamp}</td>
+                    <td class="log-price">$${log.price.toFixed(2)}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+
+            // Prepare Chart Data
+            const chartLabels = logs.map(log => {
+                // Return clean date string (MM-DD HH:MM)
+                try {
+                    const dt = log.timestamp.split(' ');
+                    if (dt.length >= 2) {
+                        const dateParts = dt[0].split('-');
+                        const timeParts = dt[1].split(':');
+                        return `${dateParts[1]}/${dateParts[2]} ${timeParts[0]}:${timeParts[1]}`;
+                    }
+                } catch(e) {}
+                return log.timestamp;
+            });
+            const chartPrices = logs.map(log => log.price);
+
+            // Hide loading view and show canvas
+            document.getElementById('loading-view').style.display = 'none';
+            const canvas = document.getElementById('priceChart');
+            canvas.style.display = 'block';
+
+            // Render Chart
+            const ctx = canvas.getContext('2d');
+            
+            // Create gradients
+            const strokeGradient = ctx.createLinearGradient(0, 0, canvas.width, 0);
+            strokeGradient.addColorStop(0, '#3b82f6');
+            strokeGradient.addColorStop(1, '#a855f7');
+
+            const fillGradient = ctx.createLinearGradient(0, 0, 0, 300);
+            fillGradient.addColorStop(0, 'rgba(168, 85, 247, 0.25)');
+            fillGradient.addColorStop(1, 'rgba(30, 41, 59, 0)');
+
+            new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: chartLabels,
+                    datasets: [{
+                        label: 'Price ($)',
+                        data: chartPrices,
+                        borderColor: strokeGradient,
+                        borderWidth: 3,
+                        pointBackgroundColor: '#a855f7',
+                        pointBorderColor: '#f8fafc',
+                        pointBorderWidth: 1.5,
+                        pointRadius: 4,
+                        pointHoverRadius: 6,
+                        tension: 0.35,
+                        fill: true,
+                        backgroundColor: fillGradient
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false
+                        },
+                        tooltip: {
+                            backgroundColor: 'rgba(15, 23, 42, 0.9)',
+                            titleFont: { family: 'Outfit', size: 13 },
+                            bodyFont: { family: 'Outfit', size: 13 },
+                            borderColor: 'rgba(255, 255, 255, 0.1)',
+                            borderWidth: 1,
+                            padding: 12,
+                            displayColors: false
+                        }
+                    },
+                    scales: {
+                        y: {
+                            grid: {
+                                color: 'rgba(255, 255, 255, 0.05)'
+                            },
+                            ticks: {
+                                color: '#94a3b8',
+                                font: { family: 'Outfit', size: 11 },
+                                callback: function(value) {
+                                    return '$' + value;
+                                }
+                            }
+                        },
+                        x: {
+                            grid: {
+                                display: false
+                            },
+                            ticks: {
+                                color: '#94a3b8',
+                                font: { family: 'Outfit', size: 10 }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        function showEmptyState(message) {
+            document.getElementById('loading-view').innerHTML = `
+                <div style="font-size: 2rem;">📊</div>
+                <p style="margin-top: 8px;">${message}</p>
+                <span style="font-size: 0.8rem; color: var(--text-secondary); max-width: 280px; text-align: center; margin-top: 4px;">
+                    Once the scheduled scraper writes some records to the CSV, your dynamic chart will load here.
+                </span>
+            `;
+            
+            const tbody = document.getElementById('logs-tbody');
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="2" style="text-align: center; color: var(--text-secondary); padding: 3rem 0;">
+                        No telemetry entries found.
+                    </td>
+                </tr>
+            `;
+            
+            document.getElementById('val-current').innerText = 'N/A';
+            document.getElementById('val-status').innerText = 'EMPTY';
+            document.getElementById('val-status').style.color = 'var(--text-secondary)';
+            document.getElementById('desc-status').innerText = 'No logging data found in path.';
+        }
+    </script>
+</body>
+</html>
