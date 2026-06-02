@@ -4,6 +4,9 @@ on:
     - cron: '0 */6 * * *' # Runs every 6 hours
   workflow_dispatch: # Allows manual triggering from the GitHub Actions UI
 
+permissions:
+  contents: write
+
 jobs:
   run-monitor:
     runs-on: ubuntu-latest
@@ -28,3 +31,14 @@ jobs:
           TARGET_PROD_URL: ${{ secrets.TARGET_PROD_URL }}
           PRICE_THRESHOLD: ${{ secrets.PRICE_THRESHOLD }}
         run: python main.py
+        
+      - name: Commit and Push Price History
+        run: |
+          git config --local user.name "github-actions[bot]"
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          if [ -f "price_history.csv" ]; then
+            git add price_history.csv
+            # Commit only if there are changes in staged files
+            git diff-index --quiet HEAD || git commit -m "chrono: update price tracking history data log"
+            git push
+          fi
